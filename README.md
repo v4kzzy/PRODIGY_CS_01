@@ -1,0 +1,1 @@
+A sleek and modern GUI application for encrypting and decrypting text using the classic Caesar Cipher technique. Features live encryption, the ability to try all shifts, and a dark-themed, modern interface built with Python’s Tkinter and ttkbootstrap
