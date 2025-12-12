@@ -5,136 +5,87 @@ from ttkbootstrap.constants import *
 
 class CaesarCipherApp(tb.Window):
     def __init__(self):
-        super().__init__(themename="cyborg") # Modern dark theme
+        super().__init__(themename="darkly")
         self.title("Caesar Cipher Pro")
         self.geometry("600x650")
         
-        # Variables
+        # State Variables
         self.shift_var = tk.IntVar(value=3)
         self.mode_var = tk.StringVar(value="encrypt")
         
-        # --- UI LAYOUT ---
-        self.create_header()
-        self.create_input_section()
-        self.create_controls_section()
-        self.create_output_section()
-        self.create_footer()
-
-        # Initial Trigger
-        self.process_text()
-
-    def create_header(self):
-        """Top section with title"""
+        self.setup_ui()
+        
+    def setup_ui(self):
+        """Builds the User Interface"""
+        
+        # --- Header ---
         header_frame = tb.Frame(self)
         header_frame.pack(fill=X, pady=20)
+        tb.Label(header_frame, text="🛡️ Caesar Cipher Tool", 
+                 font=("Segoe UI", 24, "bold"), bootstyle="info").pack()
+
+        # --- Controls Area (Shift & Mode) ---
+        controls_frame = tb.Labelframe(self, text="Configuration", padding=15)
+        controls_frame.pack(fill=X, padx=20, pady=10)
+
+        # Shift Slider
+        shift_container = tb.Frame(controls_frame)
+        shift_container.pack(fill=X, pady=5)
         
-        title = tb.Label(
-            header_frame, 
-            text="🔒 CAESAR CIPHER", 
-            font=("Helvetica", 20, "bold"),
-            bootstyle="info"
-        )
-        title.pack()
+        tb.Label(shift_container, text="Shift Key:", font=("Segoe UI", 10)).pack(side=LEFT)
+        self.shift_label = tb.Label(shift_container, text="3", font=("Segoe UI", 12, "bold"), width=3)
+        self.shift_label.pack(side=RIGHT)
         
-        subtitle = tb.Label(
-            header_frame,
-            text="Real-time Encryption & Decryption Tool",
-            font=("Helvetica", 10),
-            bootstyle="secondary"
-        )
-        subtitle.pack()
-
-    def create_input_section(self):
-        """Input text area"""
-        input_frame = tb.Labelframe(self, text=" Input Message ", padding=15, bootstyle="primary")
-        input_frame.pack(fill=X, padx=20, pady=10)
-        
-        self.entry_text = tb.Text(
-            input_frame, 
-            height=3, 
-            font=("Consolas", 11), 
-            wrap="word",
-            bd=0,
-            highlightthickness=0
-        )
-        self.entry_text.pack(fill=X)
-        self.entry_text.bind("<KeyRelease>", self.process_text)
-
-    def create_controls_section(self):
-        """Slider and Mode Toggle"""
-        control_frame = tb.Frame(self, padding=10)
-        control_frame.pack(fill=X, padx=20)
-
-        # 1. Shift Control (Slider)
-        shift_frame = tb.Labelframe(control_frame, text=" Shift Key ", padding=10, bootstyle="warning")
-        shift_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 10))
-
-        # Label to show current shift number
-        self.shift_display = tb.Label(shift_frame, text="3", font=("Helvetica", 18, "bold"), bootstyle="warning")
-        self.shift_display.pack(side=RIGHT, padx=10)
-
-        # The Slider
         self.shift_scale = tb.Scale(
-            shift_frame, 
+            shift_container, 
             from_=0, 
             to=25, 
             variable=self.shift_var, 
-            command=self.on_slider_move,
-            bootstyle="warning"
+            command=self.on_input_change,
+            bootstyle="info"
         )
-        self.shift_scale.pack(side=LEFT, fill=X, expand=YES, padx=5)
+        self.shift_scale.pack(side=LEFT, fill=X, expand=True, padx=10)
 
-        # 2. Mode Toggle (Encrypt/Decrypt)
-        mode_frame = tb.Labelframe(control_frame, text=" Mode ", padding=10, bootstyle="success")
-        mode_frame.pack(side=RIGHT, fill=BOTH)
+        # Mode Toggle (Encrypt/Decrypt)
+        mode_container = tb.Frame(controls_frame)
+        mode_container.pack(fill=X, pady=10)
         
-        self.chk_mode = tb.Checkbutton(
-            mode_frame, 
-            text="Decrypt Mode", 
-            variable=self.mode_var, 
-            onvalue="decrypt", 
-            offvalue="encrypt",
-            bootstyle="success-round-toggle",
-            command=self.process_text
-        )
-        self.chk_mode.pack(padx=10, pady=5)
+        tb.Label(mode_container, text="Mode:", font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 10))
+        
+        tb.Radiobutton(mode_container, text="Encrypt", variable=self.mode_var, 
+                       value="encrypt", command=self.on_input_change, bootstyle="info-toolbutton").pack(side=LEFT, padx=5)
+        tb.Radiobutton(mode_container, text="Decrypt", variable=self.mode_var, 
+                       value="decrypt", command=self.on_input_change, bootstyle="secondary-toolbutton").pack(side=LEFT, padx=5)
 
-    def create_output_section(self):
-        """Result area"""
-        output_frame = tb.Labelframe(self, text=" Result ", padding=15, bootstyle="info")
-        output_frame.pack(fill=BOTH, expand=YES, padx=20, pady=10)
+        # --- Input Area ---
+        input_frame = tb.Labelframe(self, text="Input Text", padding=15)
+        input_frame.pack(fill=BOTH, expand=True, padx=20, pady=10)
 
-        self.output_text = tb.Text(
-            output_frame, 
-            height=4, 
-            font=("Consolas", 12, "bold"), 
-            wrap="word",
-            state="disabled", # Read-only
-            bg="#222",        # Slightly darker background
-            fg="#00bc8c"      # Matrix green text
-        )
-        self.output_text.pack(fill=BOTH, expand=YES)
+        self.input_text = tb.Text(input_frame, height=5, font=("Consolas", 11), wrap="word")
+        self.input_text.pack(fill=BOTH, expand=True)
+        self.input_text.bind("<KeyRelease>", self.on_input_change)
 
-    def create_footer(self):
-        """Action buttons"""
+        # --- Output Area ---
+        output_frame = tb.Labelframe(self, text="Result", padding=15)
+        output_frame.pack(fill=BOTH, expand=True, padx=20, pady=10)
+
+        self.output_text = tb.Text(output_frame, height=5, font=("Consolas", 11), wrap="word", state="disabled")
+        self.output_text.pack(fill=BOTH, expand=True)
+
+        # --- Action Buttons ---
         btn_frame = tb.Frame(self, padding=20)
         btn_frame.pack(fill=X, side=BOTTOM)
 
-        # Copy Button
-        btn_copy = tb.Button(btn_frame, text="Copy Result", bootstyle="info-outline", command=self.copy_to_clipboard)
-        btn_copy.pack(side=LEFT, fill=X, expand=YES, padx=5)
-
-        # Brute Force Button
-        btn_brute = tb.Button(btn_frame, text="Crack (Try All)", bootstyle="warning-outline", command=self.open_brute_force)
-        btn_brute.pack(side=LEFT, fill=X, expand=YES, padx=5)
+        tb.Button(btn_frame, text="Try All Shifts (Brute Force)", 
+                  bootstyle="outline-warning", command=self.open_brute_force).pack(side=LEFT)
         
-        # Clear Button
-        btn_clear = tb.Button(btn_frame, text="Reset", bootstyle="danger-outline", command=self.clear_all)
-        btn_clear.pack(side=LEFT, fill=X, expand=YES, padx=5)
+        tb.Button(btn_frame, text="Clear", bootstyle="danger", command=self.clear_all).pack(side=RIGHT, padx=5)
+        
+        tb.Button(btn_frame, text="Copy Result", bootstyle="success", 
+                  command=self.copy_to_clipboard).pack(side=RIGHT, padx=5)
 
-    # --- LOGIC ---
-
-    def caesar_logic(self, text, shift, mode):
+    def logic_caesar(self, text, shift, mode):
+        """Core cryptographic logic"""
         result = ""
         # Adjust shift for decryption
         if mode == "decrypt":
@@ -143,69 +94,75 @@ class CaesarCipherApp(tb.Window):
         for char in text:
             if char.isalpha():
                 base = ord('A') if char.isupper() else ord('a')
-                # The math: (char_code - base + shift) % 26 + base
-                new_char = chr((ord(char) - base + shift) % 26 + base)
-                result += new_char
+                # Python's modulo operator handles negative numbers correctly automatically
+                result += chr((ord(char) - base + shift) % 26 + base)
             else:
                 result += char
         return result
 
-    def on_slider_move(self, value):
-        # Update the number label next to the slider
-        val = int(float(value))
-        self.shift_display.config(text=str(val))
-        self.process_text()
+    def on_input_change(self, *args):
+        """Triggered on typing, sliding, or mode switching"""
+        # Update shift label number
+        current_shift = self.shift_var.get()
+        self.shift_label.config(text=str(current_shift))
 
-    def process_text(self, event=None):
-        text = self.entry_text.get("1.0", "end-1c")
-        shift = self.shift_var.get()
+        # Get content
+        text = self.input_text.get("1.0", "end-1c")
         mode = self.mode_var.get()
 
-        encrypted = self.caesar_logic(text, shift, mode)
-        
-        # Update Output (Must enable state to write, then disable again)
+        # Process
+        encrypted = self.logic_caesar(text, current_shift, mode)
+
+        # Update Output (Must enable state to write, then disable to make read-only)
         self.output_text.config(state="normal")
         self.output_text.delete("1.0", "end")
         self.output_text.insert("1.0", encrypted)
         self.output_text.config(state="disabled")
 
     def copy_to_clipboard(self):
-        result = self.output_text.get("1.0", "end-1c")
+        content = self.output_text.get("1.0", "end-1c")
         self.clipboard_clear()
-        self.clipboard_append(result)
+        self.clipboard_append(content)
         
-        # Visual feedback on the button
-        current_text = self.create_footer
-        # Simple flash effect is tricky in pure tk, so we just print to console or simple logic
-        print("Copied to clipboard!")
+        # Visual feedback (change button text briefly)
+        original_text = "Copy Result"
+        # Access the button in the bottom frame (a bit hacky, normally keep a reference)
+        # But for this simple app, we'll just flash the border
+        self.output_text.config(bootstyle="success") 
+        self.after(500, lambda: self.output_text.config(bootstyle="default"))
 
     def clear_all(self):
-        self.entry_text.delete("1.0", "end")
-        self.shift_var.set(3)
-        self.shift_display.config(text="3")
-        self.process_text()
+        self.input_text.delete("1.0", "end")
+        self.on_input_change()
 
     def open_brute_force(self):
-        # New Window
+        """Opens a window showing all 26 possible shifts"""
         bf_window = tb.Toplevel(self)
-        bf_window.title("Brute Force Attack")
+        bf_window.title("Brute Force Analysis")
         bf_window.geometry("500x600")
-        
-        lbl = tb.Label(bf_window, text="Trying all 26 possible shifts...", font=("Helvetica", 12), bootstyle="warning")
-        lbl.pack(pady=10)
 
-        # Scrollable text area
-        txt = tb.Text(bf_window, font=("Consolas", 10))
-        txt.pack(fill=BOTH, expand=YES, padx=10, pady=10)
-        
-        text_to_crack = self.entry_text.get("1.0", "end-1c")
-        
+        input_str = self.input_text.get("1.0", "end-1c")
+        if not input_str.strip():
+            tb.Label(bf_window, text="Please enter text in the main window first.", bootstyle="danger").pack(pady=20)
+            return
+
+        scrolly = tb.Scrollbar(bf_window, bootstyle="round")
+        scrolly.pack(side=RIGHT, fill=Y)
+
+        txt_display = tb.Text(bf_window, font=("Consolas", 10), yscrollcommand=scrolly.set)
+        txt_display.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        scrolly.config(command=txt_display.yview)
+
         for s in range(26):
-            # We use 'decrypt' logic here effectively by shifting BACKWARDS
-            attempt = self.caesar_logic(text_to_crack, s, "decrypt")
+            # We always "decrypt" for brute force to find the hidden meaning
+            attempt = self.logic_caesar(input_str, s, "decrypt")
             
-            # Format: Shift # -> Result
-            txt.insert("end", f"SHIFT -{s:<2} :  {attempt}\n")
+            # Formatting: Bold the Shift number
+            txt_display.insert("end", f"Shift -{s:<2}: ", "bold_tag")
+            txt_display.insert("end", f"{attempt}\n\n")
+
+        txt_display.tag_configure("bold_tag", foreground="#5bc0de", font=("Consolas", 10, "bold"))
+        txt_display.config(state="disabled")
 
 if __name__ == "__main__":
     app = CaesarCipherApp()
